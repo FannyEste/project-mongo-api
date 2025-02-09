@@ -15,17 +15,42 @@ mongoose.Promise = Promise;
 const port = process.env.PORT || 8080;
 const app = express();
 
+// Database Seeding
 if (process.env.RESET_DB) {
   const seedDatabase = async () => {
-    await NetflixTitle.deleteMany({});
-    await NetflixTitle.insertMany(netflixData);
-    console.log("Database has been seeded!");
+    console.log("⏳ Resetting database...");
+
+    try {
+      await NetflixTitle.deleteMany({}); // Clear existing data
+
+      // Transform "listed_in" into "genres" (array instead of string)
+      const formattedData = netflixData.map((item) => ({
+        show_id: item.show_id,
+        title: item.title,
+        director: item.director,
+        cast: item.cast ? item.cast.split(", ") : [], // Convert string to array
+        country: item.country,
+        date_added: item.date_added,
+        release_year: item.release_year,
+        rating: item.rating,
+        duration: item.duration,
+        genres: item.listed_in ? item.listed_in.split(", ") : [], // Convert string to array
+        description: item.description,
+        type: item.type
+      }));
+
+      // Insert the formatted data
+      const insertedMovies = await NetflixTitle.insertMany(formattedData);
+      console.log(` Database seeded successfully! ${insertedMovies.length} movies added.`);
+    } catch (error) {
+      console.error(" Error seeding database:", error);
+    }
   };
 
   seedDatabase();
 }
 
-// Middleware
+//  Middleware
 app.use(cors());
 app.use(express.json());
 
@@ -46,7 +71,7 @@ app.get("/", (req, res) => {
 // Use Routes
 app.use("/netflix", netflixRoutes);
 
-// Start the server
+// Start the Server
 app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+  console.log(`🚀 Server running on http://localhost:${port}`);
 });
